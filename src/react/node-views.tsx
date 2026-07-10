@@ -15,12 +15,12 @@ export const BASE_PROSE_NODE_NAMES: ReadonlySet<string> = new Set([
     'paragraph',
     'heading',
     'blockquote',
-    'bulletList',
-    'orderedList',
-    'listItem',
-    'codeBlock',
-    'horizontalRule',
-    'hardBreak',
+    'bullet_list',
+    'ordered_list',
+    'list_item',
+    'code_block',
+    'horizontal_rule',
+    'hard_break',
     'text',
 ]);
 

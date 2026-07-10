@@ -50,11 +50,11 @@
             }
         },
         {
-            "name": "bulletList",
+            "name": "bullet_list",
             "description": "An unordered list.",
             "group": "block",
             "category": "prose",
-            "admitsChildCategories": ["listItem"],
+            "admitsChildCategories": ["list_item"],
             "admitsText": false,
             "contentExpression": null,
             "attrsSchema": {
@@ -65,11 +65,11 @@
             }
         },
         {
-            "name": "orderedList",
+            "name": "ordered_list",
             "description": "An ordered list.",
             "group": "block",
             "category": "prose",
-            "admitsChildCategories": ["listItem"],
+            "admitsChildCategories": ["list_item"],
             "admitsText": false,
             "contentExpression": null,
             "attrsSchema": {
@@ -80,10 +80,10 @@
             }
         },
         {
-            "name": "listItem",
+            "name": "list_item",
             "description": "One list item holding prose blocks.",
             "group": "block",
-            "category": "listItem",
+            "category": "list_item",
             "admitsChildCategories": ["prose"],
             "admitsText": false,
             "contentExpression": null,
@@ -95,7 +95,7 @@
             }
         },
         {
-            "name": "codeBlock",
+            "name": "code_block",
             "description": "A block of literal code text.",
             "group": "block",
             "category": "prose",
@@ -110,7 +110,7 @@
             }
         },
         {
-            "name": "horizontalRule",
+            "name": "horizontal_rule",
             "description": "A thematic break.",
             "group": "block",
             "category": "prose",
@@ -125,7 +125,7 @@
             }
         },
         {
-            "name": "hardBreak",
+            "name": "hard_break",
             "description": "A forced line break within inline content.",
             "group": "inline",
             "category": null,

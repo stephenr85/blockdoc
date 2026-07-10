@@ -35,13 +35,20 @@ function attrsFromSchema(attrsSchema: JsonSchema | undefined, forceId: boolean):
  *
  * 1. `contentExpression` set → verbatim.
  * 2. `admitsChildCategories` list → `(catA | catB)*`; empty list → leaf.
- * 3. null → `admitsText` ? 'inline*' : leaf.
+ * 3. null → `admitsText` ? 'inline*' : UNCONSTRAINED — the server's
+ *    `admitsChildCategories() === null` means "admits anything"
+ *    (Block::withContent enforces nothing), so the faithful compilation is the
+ *    union of every block category the composed manifests declare. With no
+ *    categories at all it degrades to a leaf.
  */
-function contentExpressionFor(entry: {
-    admitsChildCategories: string[] | null;
-    admitsText?: boolean;
-    contentExpression?: string | null;
-}): string | undefined {
+function contentExpressionFor(
+    entry: {
+        admitsChildCategories: string[] | null;
+        admitsText?: boolean;
+        contentExpression?: string | null;
+    },
+    allCategories: readonly string[],
+): string | undefined {
     if (entry.contentExpression != null && entry.contentExpression !== '') {
         return entry.contentExpression;
     }
@@ -54,10 +61,18 @@ function contentExpressionFor(entry: {
         return `(${entry.admitsChildCategories.join(' | ')})*`;
     }
 
-    return entry.admitsText ? 'inline*' : undefined;
+    if (entry.admitsText) {
+        return 'inline*';
+    }
+
+    if (allCategories.length === 0) {
+        return undefined;
+    }
+
+    return `(${allCategories.join(' | ')})*`;
 }
 
-function nodeSpecFor(entry: NodeManifestEntry): NodeSpec {
+function nodeSpecFor(entry: NodeManifestEntry, allCategories: readonly string[]): NodeSpec {
     const spec: NodeSpec = {
         attrs: attrsFromSchema(entry.attrsSchema, true),
     };
@@ -80,7 +95,7 @@ function nodeSpecFor(entry: NodeManifestEntry): NodeSpec {
         spec.group = groups.join(' ');
     }
 
-    const content = contentExpressionFor(entry);
+    const content = contentExpressionFor(entry, allCategories);
 
     if (content !== undefined) {
         spec.content = content;
@@ -153,10 +168,19 @@ export function assemblePMSchema(manifest: BlockdocManifest | BlockdocManifest[]
         throw new Error('blockdoc: no manifest declares a doc; at least one manifest must carry a non-null "doc" entry.');
     }
 
+    // Every block category the composed manifests declare, in declaration
+    // order — the compilation target for unconstrained (null) admits.
+    const allCategories: string[] = [];
+    for (const entry of nodeEntries) {
+        if (entry.group !== 'inline' && entry.category !== null && ! allCategories.includes(entry.category)) {
+            allCategories.push(entry.category);
+        }
+    }
+
     // Rule 6: the doc node's content derives from doc.admitsChildCategories by
-    // rules 2/3 (a doc never admits raw text, so null compiles to a leaf doc).
+    // rules 2/3 (a doc never admits raw text; null means unconstrained).
     const docSpec: NodeSpec = {};
-    const docContent = contentExpressionFor({ admitsChildCategories: doc.admitsChildCategories });
+    const docContent = contentExpressionFor({ admitsChildCategories: doc.admitsChildCategories }, allCategories);
 
     if (docContent !== undefined) {
         docSpec.content = docContent;
@@ -165,7 +189,7 @@ export function assemblePMSchema(manifest: BlockdocManifest | BlockdocManifest[]
     const nodes: Record<string, NodeSpec> = { doc: docSpec };
 
     for (const entry of nodeEntries) {
-        nodes[entry.name] = nodeSpecFor(entry);
+        nodes[entry.name] = nodeSpecFor(entry, allCategories);
     }
 
     // Rule 7: the text node is implicit; manifests never declare it.

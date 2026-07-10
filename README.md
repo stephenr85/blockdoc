@@ -83,7 +83,9 @@ consumes it. The base prose set is NOT emitted per profile — it is the hand-au
 1. `contentExpression` set → used verbatim.
 2. else `admitsChildCategories` is a list → content `(catA | catB)*` (PM group union);
    empty list → leaf (no content).
-3. else (`null`) → `admitsText: true` → content `'inline*'`; otherwise leaf.
+3. else (`null`) → `admitsText: true` → content `'inline*'`; otherwise UNCONSTRAINED:
+   the union of every block category the composed manifests declare, `(cat1 | cat2 | …)*`
+   (degrading to a leaf only when no categories exist).
 4. PM `group` per node = its `category` (nodes are addressed in content expressions by
    category). Nodes with manifest `group: 'inline'` additionally join the PM `inline`
    group (and get `inline: true`) so `'inline*'` reaches them.
@@ -124,19 +126,17 @@ These are the semantics that do **not** compile cleanly:
    `(outline | section)*` admits an outline anywhere, repeatedly, or never. Ordering /
    arity constraints need the `contentExpression` escape hatch (or a richer manifest
    field later).
-3. **Single-category unions are still just repetition.** `["listItem"]` derives
-   `(listItem)*` — you cannot say "exactly one" or "at least one" child.
-4. **`null` ("unconstrained") is inexpressible in PM.** Server-side, a `null`
-   `admitsChildCategories` means "admits anything". PM has no "any" wildcard short of
-   enumerating every group, so the derivation compiles `null` to `'inline*'` when
-   `admitsText` is set and to a **leaf** otherwise. Real case: `ContentSectionBlock`
-   does not override `admitsChildCategories()` (null) and carries its prose as a flat
-   `body` **string attr** — compiled faithfully it would be an attrs-only leaf, which is
-   useless in an editor. The fixture instead reshapes it for editing: `contentSection`
-   admits `["section", "prose"]` and drops the `body` attr in favour of child prose
-   nodes (keeping `heading`, `groundingTokens`, `imagePrompt`, `strategy`). The
-   server-side export (issue 06) must own this reshaping decision — flat-prose attrs vs
-   PM child content is a per-block choice, not something the client can infer.
+3. **Single-category unions are still just repetition.** `["list_item"]` derives
+   `(list_item)*` — you cannot say "exactly one" or "at least one" child.
+4. **`null` ("unconstrained") has no exact PM equivalent.** Server-side, a `null`
+   `admitsChildCategories` means "admits anything" (`Block::withContent` enforces
+   nothing). PM has no "any" wildcard, so the derivation compiles `null` to the
+   enumerated union of every block category the composed manifests declare — faithful
+   to the server for every category that exists at assembly time, but a node whose
+   category no manifest declares remains unplaceable. (`admitsText: true` still takes
+   precedence and compiles to `'inline*'`.) The real `ContentSectionBlock` also carries
+   duplicate prose as a flat `body` string attr; whether that attr yields to child
+   prose is a per-block server decision the client cannot infer.
 5. **Category `$id`s are not PM-safe tokens.** Real categories are URL `$id`s
    (e.g. `https://app.splicewire.com/json-schemas/block-category/content-section`).
    PM's content-expression tokenizer only accepts word characters, so raw `$id`s cannot
@@ -144,13 +144,13 @@ These are the semantics that do **not** compile cleanly:
    the export command must emit a stable PM-safe slug per category `$id`, not the raw id.
 6. **Name casing.** Server `#[NodeType]` names are snake_case (`content_section`) —
    valid PM names — while the hand-authored fixtures follow PM's camelCase convention
-   (`contentSection`, matching `bulletList`/`listItem` in the base set). The export
+   (`contentSection`, matching `bullet_list`/`list_item` in the base set). The export
    command must pick one convention; the client treats names as opaque.
 
 ## Fixtures
 
 - `tests/fixtures/base.manifest.json` — the vendored base prose vocabulary
-  (paragraph, heading, blockquote, lists, codeBlock, horizontalRule, hardBreak;
+  (paragraph, heading, blockquote, lists, code_block, horizontal_rule, hard_break;
   marks strong/em/code/link/annotation). Carries `doc: null` — the profile manifest
   owns the doc.
 - `tests/fixtures/content-article.manifest.json` — the `content` profile vocabulary

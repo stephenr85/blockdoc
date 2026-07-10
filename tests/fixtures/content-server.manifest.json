@@ -1,0 +1,142 @@
+{
+    "profile": "content",
+    "version": 1,
+    "doc": {
+        "admitsChildCategories": [
+            "content_outline",
+            "content_section"
+        ]
+    },
+    "nodes": [
+        {
+            "name": "content_outline",
+            "description": "The article outline: a title, a one-line excerpt, and an ordered list of section headings to write.",
+            "group": "block",
+            "category": "content_outline",
+            "categoryId": "https://app.splicewire.com/json-schemas/block-category/content-outline",
+            "admitsChildCategories": null,
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "title": "ContentOutlineBlock",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "title": {
+                        "type": "string",
+                        "examples": [
+                            "string"
+                        ],
+                        "description": "The article title."
+                    },
+                    "excerpt": {
+                        "type": "string",
+                        "examples": [
+                            "string"
+                        ],
+                        "description": "A one-line excerpt summarising the article."
+                    },
+                    "sectionHeadings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "examples": [
+                            []
+                        ],
+                        "description": "The ordered list of section headings, drawn from the grounding snapshot, to write the article from."
+                    }
+                },
+                "description": "The article outline: a title, a one-line excerpt, and an ordered list of section headings to write.",
+                "required": [
+                    "title",
+                    "excerpt",
+                    "sectionHeadings"
+                ]
+            }
+        },
+        {
+            "name": "content_section",
+            "description": "A single section of the article: a heading and grounded body prose.",
+            "group": "block",
+            "category": "content_section",
+            "categoryId": "https://app.splicewire.com/json-schemas/block-category/content-section",
+            "admitsChildCategories": null,
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "title": "ContentSectionBlock",
+                "properties": {
+                    "id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "heading": {
+                        "type": "string",
+                        "x-swc-prose": "subject",
+                        "examples": [
+                            "string"
+                        ],
+                        "description": "The section heading."
+                    },
+                    "body": {
+                        "type": "string",
+                        "x-swc-prose": "subject",
+                        "examples": [
+                            "string"
+                        ],
+                        "description": "The section body. Use only facts present in the grounding snapshot; never invent subjects."
+                    },
+                    "groundingTokens": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        },
+                        "examples": [
+                            []
+                        ],
+                        "description": "The grounding tokens (e.g. \"fragment:UUID\") whose facts this section actually used. Cite only tokens that appear in the grounding snapshot."
+                    },
+                    "imagePrompt": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-swc-prose": "subject",
+                        "examples": [
+                            "string"
+                        ],
+                        "description": "An optional Image Intent for this section: a short prompt describing an image that would illustrate it. Leave empty if no image is warranted. (ADR-0042 — the interpreter expands this hint into a resolved image cell.)"
+                    },
+                    "strategy": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "examples": [
+                            "string"
+                        ],
+                        "description": "The preferred image strategy for this section's illustration (e.g. First, Match, Random, Blend, Fresh). Only consulted when the host's imageStrategy is set to Infer; ignored otherwise. Omit when no image is warranted."
+                    }
+                },
+                "description": "A single section of the article: a heading and grounded body prose.",
+                "required": [
+                    "heading",
+                    "body"
+                ]
+            }
+        }
+    ],
+    "marks": []
+}

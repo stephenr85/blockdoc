@@ -57,17 +57,17 @@ function nodeToDOM(name: string, spec: NodeSpec): (node: PMNode) => DOMOutputSpe
             return (node) => [`h${clampLevel(node.attrs.level)}`, idAttrs(node), 0];
         case 'blockquote':
             return (node) => ['blockquote', idAttrs(node), 0];
-        case 'bulletList':
+        case 'bullet_list':
             return (node) => ['ul', idAttrs(node), 0];
-        case 'orderedList':
+        case 'ordered_list':
             return (node) => ['ol', idAttrs(node), 0];
-        case 'listItem':
+        case 'list_item':
             return (node) => ['li', idAttrs(node), 0];
-        case 'codeBlock':
+        case 'code_block':
             return (node) => ['pre', idAttrs(node), ['code', 0]];
-        case 'horizontalRule':
+        case 'horizontal_rule':
             return (node) => ['hr', idAttrs(node)];
-        case 'hardBreak':
+        case 'hard_break':
             return () => ['br'];
         default: {
             const hasContent = spec.content !== undefined && spec.content !== '';
@@ -92,17 +92,17 @@ function nodeParseDOM(name: string, spec: NodeSpec): NodeSpec['parseDOM'] {
             }));
         case 'blockquote':
             return [{ tag: 'blockquote', getAttrs: parseId }];
-        case 'bulletList':
+        case 'bullet_list':
             return [{ tag: 'ul', getAttrs: parseId }];
-        case 'orderedList':
+        case 'ordered_list':
             return [{ tag: 'ol', getAttrs: parseId }];
-        case 'listItem':
+        case 'list_item':
             return [{ tag: 'li', getAttrs: parseId }];
-        case 'codeBlock':
+        case 'code_block':
             return [{ tag: 'pre', preserveWhitespace: 'full', getAttrs: parseId }];
-        case 'horizontalRule':
+        case 'horizontal_rule':
             return [{ tag: 'hr', getAttrs: parseId }];
-        case 'hardBreak':
+        case 'hard_break':
             return [{ tag: 'br' }];
         default: {
             const tag = spec.inline === true ? 'span' : 'div';

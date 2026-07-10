@@ -41,7 +41,7 @@ describe('attr round-tripping', () => {
                                         { type: 'annotation', attrs: { id: generateNodeId() } },
                                     ],
                                 },
-                                { type: 'hardBreak', attrs: { id: null } },
+                                { type: 'hard_break', attrs: { id: null } },
                             ],
                         },
                     ],

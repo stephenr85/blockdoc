@@ -8,9 +8,9 @@ const schema = assemblePMSchema([base, contentArticle]);
 
 describe('content expression derivation', () => {
     it('derives leaves from an empty admitsChildCategories list', () => {
-        expect(schema.nodes.horizontalRule.spec.content).toBeUndefined();
-        expect(schema.nodes.horizontalRule.isLeaf).toBe(true);
-        expect(schema.nodes.hardBreak.isLeaf).toBe(true);
+        expect(schema.nodes.horizontal_rule.spec.content).toBeUndefined();
+        expect(schema.nodes.horizontal_rule.isLeaf).toBe(true);
+        expect(schema.nodes.hard_break.isLeaf).toBe(true);
         expect(schema.nodes.contentOutline.isLeaf).toBe(true);
     });
 
@@ -22,21 +22,21 @@ describe('content expression derivation', () => {
 
     it('derives category-union repetition from admitsChildCategories lists', () => {
         expect(schema.nodes.blockquote.spec.content).toBe('(prose)*');
-        expect(schema.nodes.bulletList.spec.content).toBe('(listItem)*');
+        expect(schema.nodes.bullet_list.spec.content).toBe('(list_item)*');
         expect(schema.nodes.contentSection.spec.content).toBe('(section | prose)*');
         expect(schema.nodes.contentArticle.spec.content).toBe('(outline | section)*');
     });
 
     it('lets an explicit contentExpression override derivation', () => {
-        expect(schema.nodes.codeBlock.spec.content).toBe('text*');
-        expect(schema.nodes.codeBlock.isTextblock).toBe(true);
+        expect(schema.nodes.code_block.spec.content).toBe('text*');
+        expect(schema.nodes.code_block.isTextblock).toBe(true);
     });
 
     it('uses the category as the PM group; inline nodes join the inline group', () => {
         expect(schema.nodes.contentSection.spec.group).toBe('section');
         expect(schema.nodes.paragraph.spec.group).toBe('prose');
-        expect(schema.nodes.hardBreak.spec.group).toBe('inline');
-        expect(schema.nodes.hardBreak.isInline).toBe(true);
+        expect(schema.nodes.hard_break.spec.group).toBe('inline');
+        expect(schema.nodes.hard_break.isInline).toBe(true);
         // Null category → no category group; untargetable by derived expressions.
         expect(schema.nodes.contentArticle.spec.group).toBeUndefined();
     });

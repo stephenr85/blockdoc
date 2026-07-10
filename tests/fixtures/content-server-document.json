@@ -1,0 +1,66 @@
+{
+    "type": "doc",
+    "content": [
+        {
+            "type": "content_section",
+            "attrs": {
+                "id": "0197c2f0-5c5e-7000-8000-000000000001",
+                "heading": "Where it was filmed",
+                "body": "The series was filmed on location across the Highlands.",
+                "groundingTokens": ["fragment:0197c2f0-5c5e-7000-8000-00000000000f"],
+                "imagePrompt": null,
+                "strategy": null
+            },
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "Filmed in "},
+                        {"type": "text", "text": "Scotland", "marks": [{"type": "strong"}]},
+                        {"type": "text", "text": ", per "},
+                        {"type": "text", "text": "the location guide", "marks": [{"type": "link", "attrs": {"href": "https://example.test/guide"}}]},
+                        {"type": "text", "text": "."}
+                    ]
+                },
+                {
+                    "type": "bullet_list",
+                    "content": [
+                        {
+                            "type": "list_item",
+                            "content": [
+                                {"type": "paragraph", "content": [{"type": "text", "text": "Glen Coe"}]}
+                            ]
+                        },
+                        {
+                            "type": "list_item",
+                            "content": [
+                                {"type": "paragraph", "content": [{"type": "text", "text": "Isle of Skye"}]}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "content_section",
+            "attrs": {
+                "id": "0197c2f0-5c5e-7000-8000-000000000002",
+                "heading": "Annotated span",
+                "body": "A section whose prose carries an annotation mark.",
+                "groundingTokens": [],
+                "imagePrompt": null,
+                "strategy": null
+            },
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "An "},
+                        {"type": "text", "text": "evidence-bound", "marks": [{"type": "annotation", "attrs": {"id": "0197c2f0-5c5e-7000-8000-0000000000aa"}}]},
+                        {"type": "text", "text": " claim."}
+                    ]
+                }
+            ]
+        }
+    ]
+}

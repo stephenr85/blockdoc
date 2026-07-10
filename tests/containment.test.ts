@@ -24,10 +24,10 @@ describe('containment via assembled schema', () => {
                             content: [{ type: 'text', text: 'Grounded prose.' }],
                         },
                         {
-                            type: 'bulletList',
+                            type: 'bullet_list',
                             content: [
                                 {
-                                    type: 'listItem',
+                                    type: 'list_item',
                                     content: [
                                         { type: 'paragraph', content: [{ type: 'text', text: 'point' }] },
                                     ],
@@ -62,7 +62,7 @@ describe('containment via assembled schema', () => {
     });
 
     it('rejects a child whose category is not admitted by its container', () => {
-        // blockquote admits ['prose']; listItem is category 'listItem'.
+        // blockquote admits ['prose']; list_item is category 'list_item'.
         const doc = schema.nodeFromJSON({
             type: 'doc',
             content: [
@@ -73,7 +73,7 @@ describe('containment via assembled schema', () => {
                             type: 'blockquote',
                             content: [
                                 {
-                                    type: 'listItem',
+                                    type: 'list_item',
                                     content: [{ type: 'paragraph', content: [] }],
                                 },
                             ],
