@@ -177,8 +177,7 @@ describe('BlockdocEditor island', () => {
             await setValue(JSON.parse(JSON.stringify(committed)) as DocJson);
         });
 
-        // No rebuild: the document node is untouched (state identity may shift
-        // from doc-preserving selection/plugin transactions) and no echo commit.
+        // No rebuild: the document node is untouched and no echo commit fires.
         expect(view.state.doc).toBe(stateBefore.doc);
         expect(onChange).toHaveBeenCalledTimes(1);
     });

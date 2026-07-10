@@ -162,6 +162,18 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     const sourceRef = useRef(source);
     sourceRef.current = source;
 
+    // Deferred-apply generation: only the LATEST scheduled external apply may
+    // run. A schedule that flushes after a newer one was queued is stale by
+    // definition — acting on it would reassert an older value over the live
+    // document (e.g. a mount-time value over edits committed since).
+    const externalApplyGenerationRef = useRef(0);
+
+    // The editor whose initial value the intake effect has already seen: the
+    // FIRST effect run per editor instance never applies (useEditor's own
+    // `content` seeded it) — only source CHANGES rebuild.
+    const intakeSeededEditorRef = useRef<unknown>(null);
+
+
     const extensions = useMemo(
         () => [
             ...createManifestExtensions(manifestList, { nodeViews }),
@@ -247,6 +259,14 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                 return;
             }
 
+            // Hard guard: even when the controller's last-committed record has
+            // drifted, an external value identical to the LIVE document must
+            // never rebuild (it would swap the doc node and rebase history).
+            if (JSON.stringify(doc ?? null) === JSON.stringify(editor.state.doc.toJSON())) {
+                controller.noteRebuilt(doc);
+                return;
+            }
+
             const survivingId = selectionNodeId(editor.state);
 
             suppressCommitsRef.current = true;
@@ -275,23 +295,37 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
         };
 
         // Deferred a microtask: setContent re-renders React NodeViews via
-        // flushSync, which React forbids from inside a render/effect pass
-        // (the value prop often changes as part of a parent render).
-        let cancelled = false;
-        const applyDeferred = (doc: DocJson | null) => {
+        // flushSync, which React forbids from inside a render/effect pass (the
+        // value prop often changes as part of a parent render). The flush
+        // reads the CURRENT source rather than a value captured at schedule
+        // time — a stale scheduled apply must never rebuild from a mid-flight
+        // doc (repeat flushes collapse into the echo guard's 'ignore').
+        const scheduleExternalApply = () => {
+            const generation = ++externalApplyGenerationRef.current;
+
             queueMicrotask(() => {
-                if (! cancelled) {
-                    applyExternalValue(doc);
+                if (generation !== externalApplyGenerationRef.current) {
+                    return; // superseded by a newer schedule
                 }
+
+                applyExternalValue(sourceRef.current.get());
             });
         };
 
-        applyDeferred(source.get());
+        if (intakeSeededEditorRef.current === editor) {
+            // A NEW source identity on a live editor is a genuinely new
+            // external value (a revise landed, the form data moved).
+            scheduleExternalApply();
+        } else {
+            // First run for this editor: its initial content came from
+            // useEditor({ content }) — re-applying the same value could only
+            // clobber edits made before a late microtask flush.
+            intakeSeededEditorRef.current = editor;
+        }
 
-        const unsubscribe = source.subscribe?.((doc) => applyDeferred(doc));
+        const unsubscribe = source.subscribe?.(() => scheduleExternalApply());
 
         return () => {
-            cancelled = true;
             unsubscribe?.();
         };
     }, [source, editor, noteSelection]);
