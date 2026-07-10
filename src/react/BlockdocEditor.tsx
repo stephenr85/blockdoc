@@ -274,9 +274,26 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
             noteSelection(editor.state);
         };
 
-        applyExternalValue(source.get());
+        // Deferred a microtask: setContent re-renders React NodeViews via
+        // flushSync, which React forbids from inside a render/effect pass
+        // (the value prop often changes as part of a parent render).
+        let cancelled = false;
+        const applyDeferred = (doc: DocJson | null) => {
+            queueMicrotask(() => {
+                if (! cancelled) {
+                    applyExternalValue(doc);
+                }
+            });
+        };
 
-        return source.subscribe?.((doc) => applyExternalValue(doc));
+        applyDeferred(source.get());
+
+        const unsubscribe = source.subscribe?.((doc) => applyDeferred(doc));
+
+        return () => {
+            cancelled = true;
+            unsubscribe?.();
+        };
     }, [source, editor, noteSelection]);
 
     useEffect(() => {
