@@ -5,7 +5,7 @@ import { keymap } from 'prosemirror-keymap';
 import { EditorState } from 'prosemirror-state';
 import type { Plugin } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { assemblePMSchema, generateNodeId, NODE_ID_ATTR } from '../core';
 import type { BlockdocManifest } from '../core';
 import { CommitController } from './commit-controller';
@@ -44,6 +44,8 @@ export interface BlockdocEditorProps {
     onChange?: (doc: DocJson) => void;
     commitPolicy?: CommitPolicy;
     commitBus?: CommitBus;
+    /** Fires with {@link selectionNodeId} whenever the selection's node id changes. */
+    onSelectionChange?: (nodeId: string | null) => void;
     nodeViews?: NodeViewRegistry;
     /** Collab seam: extra PM plugins appended to the island's list. */
     extraPlugins?: (context: { schema: Schema }) => Plugin[];
@@ -110,6 +112,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
         onChange,
         commitPolicy,
         commitBus,
+        onSelectionChange,
         nodeViews,
         extraPlugins,
         docSource,
@@ -135,6 +138,20 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     extraPluginsRef.current = extraPlugins;
     const nodeViewsRef = useRef(nodeViews);
     nodeViewsRef.current = nodeViews;
+    const onSelectionChangeRef = useRef(onSelectionChange);
+    onSelectionChangeRef.current = onSelectionChange;
+
+    // Selection-node tracking: hosts (the intent chrome among them) hear the
+    // id of the block the selection lives in whenever it changes.
+    const lastSelectionNodeIdRef = useRef<string | null>(null);
+    const noteSelection = useCallback((state: EditorState) => {
+        const id = selectionNodeId(state);
+
+        if (id !== lastSelectionNodeIdRef.current) {
+            lastSelectionNodeIdRef.current = id;
+            onSelectionChangeRef.current?.(id);
+        }
+    }, []);
 
     const source = useMemo(() => docSource ?? valueDocSource(value ?? null), [docSource, value]);
     const sourceRef = useRef(source);
@@ -171,6 +188,8 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                 if (transaction.docChanged) {
                     controller.noteChange();
                 }
+
+                noteSelection(view.state);
             },
             handleDOMEvents: {
                 blur: () => {
@@ -180,6 +199,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
             },
         });
         viewRef.current = view;
+        noteSelection(view.state);
 
         return () => {
             viewRef.current = null;
@@ -187,7 +207,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
             view.destroy();
             controller.dispose();
         };
-    }, [schema, manifestList, portalRegistry]);
+    }, [schema, manifestList, portalRegistry, noteSelection]);
 
     // External value intake: the echo guard decides ignore vs rebuild. A
     // rebuild replaces EditorState wholesale (fresh history), remaps the
@@ -216,12 +236,13 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                 }),
             );
             controller.noteRebuilt(doc);
+            noteSelection(view.state);
         };
 
         applyExternalValue(source.get());
 
         return source.subscribe?.((doc) => applyExternalValue(doc));
-    }, [source, schema]);
+    }, [source, schema, noteSelection]);
 
     useEffect(() => {
         if (commitBus === undefined) {

@@ -5,7 +5,7 @@ import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BlockdocManifest } from '../core';
 import { BlockdocEditor } from '../react/BlockdocEditor';
-import type { CommitBus } from '../react/BlockdocEditor';
+import type { BlockdocEditorHandle, CommitBus } from '../react/BlockdocEditor';
 import type { CommitPolicy, DocJson } from '../react/commit-controller';
 import type { NodeViewRegistry } from '../react/node-views';
 
@@ -29,6 +29,18 @@ interface RichContentProps {
     options?: Record<string, unknown>;
     // Shared. In field mode RJSF's signature is (newFormData, path, errorSchema?, id?).
     onChange?: (doc: DocJson, path?: Array<string | number>) => void;
+}
+
+/**
+ * The formContext intent-bus seam (structurally the rjsf-registry
+ * FormIntentBus — typed here so blockdoc takes no dependency on it). When a
+ * host provides one, the widget registers the island's commit flush (a dirty
+ * editor can never race an intent with a stale doc) and renders the
+ * selection-scoped revise chrome.
+ */
+export interface FormIntentBusLike {
+    registerFlush(flush: () => void): () => void;
+    dispatch(intent: { type: string; fieldPath: string; target?: unknown; payload?: unknown }): Promise<void>;
 }
 
 export interface RichContentOptions {
@@ -130,6 +142,49 @@ export function createRichContentWidget(
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [profileManifest, docAdmitsKey]);
 
+        // Intent-bus seam: flush registration + the selection-scoped revise chrome.
+        const rawIntentBus = formContext.intentBus as FormIntentBusLike | undefined;
+        const intentBus =
+            rawIntentBus !== undefined
+                && typeof rawIntentBus.registerFlush === 'function'
+                && typeof rawIntentBus.dispatch === 'function'
+                ? rawIntentBus
+                : undefined;
+
+        const editorRef = useRef<BlockdocEditorHandle | null>(null);
+
+        useEffect(() => {
+            if (intentBus === undefined) {
+                return;
+            }
+
+            return intentBus.registerFlush(() => editorRef.current?.flushCommits());
+        }, [intentBus]);
+
+        const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+        const [instruction, setInstruction] = useState('');
+        const [dispatching, setDispatching] = useState(false);
+        const intentFieldPath = (props.fieldPathId?.path ?? []).join('.');
+
+        const dispatchRevise = useCallback(async () => {
+            if (intentBus === undefined) {
+                return;
+            }
+
+            setDispatching(true);
+
+            try {
+                await intentBus.dispatch({
+                    type: 'sw:revise',
+                    fieldPath: intentFieldPath,
+                    target: { nodeId: selectedNodeId ?? undefined },
+                    payload: { instruction: instruction || undefined },
+                });
+            } finally {
+                setDispatching(false);
+            }
+        }, [intentBus, intentFieldPath, selectedNodeId, instruction]);
+
         const [advisoryErrors, setAdvisoryErrors] = useState<string[]>([]);
         const fieldSchema = props.schema;
         const onChangeRef = useRef(props.onChange);
@@ -178,6 +233,7 @@ export function createRichContentWidget(
                     </ul>
                 )}
                 <BlockdocEditor
+                    ref={editorRef}
                     manifests={manifests}
                     value={value ?? null}
                     onChange={handleChange}
@@ -185,7 +241,59 @@ export function createRichContentWidget(
                     palette={(options.palette as boolean | undefined) ?? defaults.palette ?? true}
                     nodeViews={nodeViewRegistry}
                     commitBus={formContext.commitBus as CommitBus | undefined}
+                    onSelectionChange={intentBus !== undefined ? setSelectedNodeId : undefined}
                 />
+                {intentBus !== undefined && (
+                    <div
+                        data-blockdoc-intent-chrome=""
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '4px 0',
+                            marginTop: 4,
+                            borderTop: '1px solid #e4e4e7',
+                            fontSize: 12,
+                        }}
+                    >
+                        <span data-blockdoc-selected-node="" style={{ color: '#71717a', fontFamily: 'monospace' }}>
+                            {selectedNodeId ?? 'no block selected'}
+                        </span>
+                        <input
+                            type="text"
+                            data-blockdoc-revise-instruction=""
+                            value={instruction}
+                            onChange={(event) => setInstruction(event.target.value)}
+                            placeholder="Revise instruction…"
+                            style={{
+                                flex: 1,
+                                font: 'inherit',
+                                fontSize: 12,
+                                padding: '2px 6px',
+                                border: '1px solid #d4d4d8',
+                                borderRadius: 4,
+                            }}
+                        />
+                        <button
+                            type="button"
+                            data-blockdoc-revise=""
+                            disabled={dispatching}
+                            onClick={() => void dispatchRevise()}
+                            style={{
+                                font: 'inherit',
+                                fontSize: 12,
+                                padding: '2px 8px',
+                                border: '1px solid #d4d4d8',
+                                borderRadius: 4,
+                                background: '#fff',
+                                cursor: dispatching ? 'default' : 'pointer',
+                                opacity: dispatching ? 0.5 : 1,
+                            }}
+                        >
+                            Revise
+                        </button>
+                    </div>
+                )}
             </div>
         );
     }
