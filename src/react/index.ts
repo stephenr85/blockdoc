@@ -5,6 +5,13 @@ export type { CommitPolicy, DocJson, ExternalValueDecision } from './commit-cont
 export { withEditingDOM } from './editing-schema';
 export { valueDocSource } from './doc-source';
 export type { DocSource } from './doc-source';
+export {
+    ANNOTATION_MARK_NAME,
+    annotationIds,
+    annotationIntegrityPlugin,
+    annotationRanges,
+    type AnnotationRange,
+} from './annotation-plugin';
 export { nodeIdPlugin } from './node-id-plugin';
 export {
     BASE_PROSE_NODE_NAMES,

@@ -13,6 +13,7 @@ import type { CommitPolicy, DocJson } from './commit-controller';
 import { withEditingDOM } from './editing-schema';
 import { valueDocSource } from './doc-source';
 import type { DocSource } from './doc-source';
+import { annotationIntegrityPlugin } from './annotation-plugin';
 import { nodeIdPlugin } from './node-id-plugin';
 import { resolveNodeViewComponents } from './node-views';
 import type { NodeViewRegistry } from './node-views';
@@ -79,6 +80,7 @@ function buildPlugins(schema: Schema, extraPlugins?: (context: { schema: Schema 
         keymap({ 'Mod-z': undo, 'Shift-Mod-z': redo, 'Mod-y': redo }),
         keymap(baseKeymap),
         nodeIdPlugin(),
+        annotationIntegrityPlugin(),
         ...(extraPlugins?.({ schema }) ?? []),
     ];
 }
