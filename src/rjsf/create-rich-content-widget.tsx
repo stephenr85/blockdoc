@@ -34,6 +34,8 @@ export interface RichContentOptions {
     manifest?: BlockdocManifest;
     /** A manifest reference resolved through the injected schema fetcher. */
     manifestRef?: string;
+    /** Slot-level doc admission override (category slugs) — mirrors the server's write-path check. */
+    docAdmits?: string[];
     /** Show the insert palette. Default true. */
     palette?: boolean;
     /** Commit policy for the island. */
@@ -106,13 +108,25 @@ export function createRichContentWidget(
         }, [inlineManifest, manifestRef, schemaFetcher]);
 
         const profileManifest = inlineManifest ?? fetchedManifest;
+        const docAdmits = Array.isArray(options.docAdmits)
+            ? (options.docAdmits as string[])
+            : undefined;
+        const docAdmitsKey = docAdmits?.join('|');
         const manifests = useMemo(() => {
             if (profileManifest === null || profileManifest === undefined) {
                 return null;
             }
 
-            return defaults.baseManifest !== undefined ? [defaults.baseManifest, profileManifest] : [profileManifest];
-        }, [profileManifest]);
+            // A slot-level doc admission (x-widget-options.docAdmits) overrides
+            // the profile manifest's doc — the same declaration the server's
+            // write-path admission check reads, so both sides enforce one truth.
+            const profile = docAdmits !== undefined
+                ? { ...profileManifest, doc: { admitsChildCategories: docAdmits } }
+                : profileManifest;
+
+            return defaults.baseManifest !== undefined ? [defaults.baseManifest, profile] : [profile];
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [profileManifest, docAdmitsKey]);
 
         const [advisoryErrors, setAdvisoryErrors] = useState<string[]>([]);
         const fieldSchema = props.schema;
