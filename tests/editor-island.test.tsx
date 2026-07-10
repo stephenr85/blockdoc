@@ -50,7 +50,13 @@ function mountIsland(initial: DocJson | null): Mounted {
         view: ref.current!.view!,
         handle: ref.current!,
         onChange,
-        setValue: (value) => utils.rerender(view(value)),
+        setValue: async (value) => {
+            utils.rerender(view(value));
+            // External rebuilds are deferred a microtask (React flushSync rule).
+            await act(async () => {
+                await Promise.resolve();
+            });
+        },
     };
 }
 
@@ -157,7 +163,7 @@ describe('BlockdocEditor island', () => {
         expect(flushes.size).toBe(0);
     });
 
-    it('ignores the onChange echo: the value prop returning to last-committed does not rebuild', () => {
+    it('ignores the onChange echo: the value prop returning to last-committed does not rebuild', async () => {
         const { view, handle, onChange, setValue } = mountIsland(doc(paragraph('p1', 'hello')));
 
         typeText(view, '!', 6);
@@ -167,15 +173,15 @@ describe('BlockdocEditor island', () => {
         const committed = onChange.mock.calls[0][0] as DocJson;
         const stateBefore = view.state;
 
-        act(() => {
-            setValue(JSON.parse(JSON.stringify(committed)) as DocJson);
+        await act(async () => {
+            await setValue(JSON.parse(JSON.stringify(committed)) as DocJson);
         });
 
         expect(view.state).toBe(stateBefore);
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it('rebuilds from an external value with the selection remapped to the surviving node id', () => {
+    it('rebuilds from an external value with the selection remapped to the surviving node id', async () => {
         const initial = doc(paragraph('p1', 'alpha'), paragraph('p2', 'beta'));
         const { view, onChange, setValue } = mountIsland(initial);
 
@@ -187,8 +193,8 @@ describe('BlockdocEditor island', () => {
         expect(selectionNodeId(view.state)).toBe('p2');
 
         const external = doc(paragraph('p2', 'beta'), paragraph('p3', 'gamma'));
-        act(() => {
-            setValue(external);
+        await act(async () => {
+            await setValue(external);
         });
 
         expect(view.state.doc.toJSON()).toEqual(external);
@@ -201,7 +207,7 @@ describe('BlockdocEditor island', () => {
         expect(onChange).not.toHaveBeenCalled();
     });
 
-    it('falls back to the doc start when the selection node did not survive', () => {
+    it('falls back to the doc start when the selection node did not survive', async () => {
         const initial = doc(paragraph('p1', 'alpha'), paragraph('p2', 'beta'));
         const { view, setValue } = mountIsland(initial);
 
@@ -211,22 +217,22 @@ describe('BlockdocEditor island', () => {
         });
 
         const external = doc(paragraph('p9', 'replaced'));
-        act(() => {
-            setValue(external);
+        await act(async () => {
+            await setValue(external);
         });
 
         expect(view.state.doc.toJSON()).toEqual(external);
         expect(view.state.selection.from).toBe(selectionForNodeId(view.state.doc, null).from);
     });
 
-    it('resets undo history on an external rebuild', () => {
+    it('resets undo history on an external rebuild', async () => {
         const { view, setValue } = mountIsland(doc(paragraph('p1', 'alpha')));
 
         typeText(view, '!', 6);
 
         const external = doc(paragraph('p1', 'omega'));
-        act(() => {
-            setValue(external);
+        await act(async () => {
+            await setValue(external);
         });
 
         // Mod-z after the rebuild has nothing to undo: the doc stays put.
