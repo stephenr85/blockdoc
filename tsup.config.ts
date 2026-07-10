@@ -7,6 +7,7 @@ export default defineConfig({
         rjsf: 'src/rjsf/index.ts',
     },
     format: ['esm'],
+    platform: 'browser',
     dts: true,
     sourcemap: true,
     clean: true,
