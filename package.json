@@ -1,7 +1,7 @@
 {
-    "name": "@stephenr85/blockdoc",
+    "name": "@rushing/blockdoc",
     "version": "0.1.0",
-    "description": "Manifest-driven ProseMirror documents: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → prosemirror-model Schema via category-derived content expressions), node id conventions, a React editor island (/react) with a NodeView registry, and an RJSF rich-content factory (/rjsf).",
+    "description": "Manifest-driven ProseMirror documents: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest \u2192 prosemirror-model Schema via category-derived content expressions), node id conventions, a React editor island (/react) with a NodeView registry, and an RJSF rich-content factory (/rjsf).",
     "license": "MIT",
     "type": "module",
     "main": "src/core/index.ts",
@@ -37,7 +37,7 @@
     "peerDependencies": {
         "@rjsf/core": "^6.0.0",
         "@rjsf/utils": "^6.0.0",
-        "@stephenr85/rjsf-registry": "^0.1.0",
+        "@rushing/rjsf-registry": "^0.1.0",
         "react": ">=18",
         "react-dom": ">=18"
     },
@@ -48,7 +48,7 @@
         "@rjsf/utils": {
             "optional": true
         },
-        "@stephenr85/rjsf-registry": {
+        "@rushing/rjsf-registry": {
             "optional": true
         },
         "react": {
@@ -63,7 +63,7 @@
         "@rjsf/shadcn": "^6.0.0",
         "@rjsf/utils": "^6.0.0",
         "@rjsf/validator-ajv8": "^6.0.0",
-        "@stephenr85/rjsf-registry": "file:../rjsf-registry",
+        "@rushing/rjsf-registry": "file:../rjsf-registry",
         "@testing-library/react": "^16.1.0",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",

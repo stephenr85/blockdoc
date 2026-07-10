@@ -1,4 +1,4 @@
-import { SchemaForm } from '@stephenr85/rjsf-registry';
+import { SchemaForm } from '@rushing/rjsf-registry';
 import type { ComponentType } from 'react';
 import { useMemo } from 'react';
 import { NODE_ID_ATTR } from '../core';

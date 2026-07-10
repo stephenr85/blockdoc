@@ -1,4 +1,4 @@
-# @stephenr85/blockdoc
+# @rushing/blockdoc
 
 Manifest-driven ProseMirror documents. The `/core` subpath (React-free) ships:
 
@@ -24,7 +24,7 @@ Nothing under `src/core` imports React or RJSF. The editing half ships as two mo
   validation of the field schema at commit boundaries (server stays authoritative).
 
 ```ts
-import { assemblePMSchema, generateNodeId } from '@stephenr85/blockdoc/core';
+import { assemblePMSchema, generateNodeId } from '@rushing/blockdoc/core';
 
 const schema = assemblePMSchema([baseManifest, contentManifest]);
 const doc = schema.nodeFromJSON(json);
