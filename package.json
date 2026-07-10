@@ -1,20 +1,33 @@
 {
     "name": "@rushing/blockdoc",
     "version": "0.1.0",
-    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
+    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest \u2192 ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
     "license": "MIT",
     "type": "module",
-    "main": "src/core/index.ts",
-    "types": "src/core/index.ts",
+    "main": "dist/core.js",
+    "types": "dist/core.d.ts",
     "exports": {
-        ".": "./src/core/index.ts",
-        "./core": "./src/core/index.ts",
-        "./react": "./src/react/index.ts",
-        "./rjsf": "./src/rjsf/index.ts"
+        ".": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.js"
+        },
+        "./core": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.js"
+        },
+        "./react": {
+            "types": "./dist/react.d.ts",
+            "import": "./dist/react.js"
+        },
+        "./rjsf": {
+            "types": "./dist/rjsf.d.ts",
+            "import": "./dist/rjsf.js"
+        }
     },
     "files": [
-        "src",
-        "README.md"
+        "README.md",
+        "dist",
+        "src"
     ],
     "repository": {
         "type": "git",
@@ -22,7 +35,10 @@
     },
     "scripts": {
         "test": "vitest run",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "prepublishOnly": "npm run build"
     },
     "dependencies": {
         "@tiptap/core": "^3.27.3",
@@ -70,6 +86,11 @@
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "typescript": "^5.7.0",
-        "vitest": "^3.0.0"
+        "vitest": "^3.0.0",
+        "tsup": "^8.5.1"
+    },
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
     }
 }
