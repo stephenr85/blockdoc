@@ -2,7 +2,8 @@ export { BlockdocEditor } from './BlockdocEditor';
 export type { BlockdocEditorHandle, BlockdocEditorProps, CommitBus } from './BlockdocEditor';
 export { CommitController } from './commit-controller';
 export type { CommitPolicy, DocJson, ExternalValueDecision } from './commit-controller';
-export { withEditingDOM } from './editing-schema';
+export { createManifestExtensions } from './manifest-extensions';
+export type { ManifestExtensionsOptions } from './manifest-extensions';
 export { valueDocSource } from './doc-source';
 export type { DocSource } from './doc-source';
 export {
@@ -19,8 +20,7 @@ export {
     GenericNodeView,
     needsGenericNodeView,
     resolveNodeViewComponents,
+    tiptapNodeView,
 } from './node-views';
-export type { NodeViewRegistry, ResolvedNodeView } from './node-views';
-export { ReactNodeView, usePortalRegistry } from './portal-bridge';
-export type { NodeViewComponentProps, PortalRegistry } from './portal-bridge';
+export type { NodeViewComponentProps, NodeViewRegistry, ResolvedNodeView } from './node-views';
 export { selectionForNodeId, selectionNodeId } from './selection';

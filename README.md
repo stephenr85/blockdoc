@@ -3,20 +3,41 @@
 Manifest-driven ProseMirror documents. The `/core` subpath (React-free) ships:
 
 - TypeScript types for the **blockdoc node-manifest format** (`BlockdocManifest`, `NodeManifestEntry`, `MarkManifestEntry`, `DocManifest`),
-- `assemblePMSchema(manifest | manifest[])` — compiles one or more manifests into a `prosemirror-model` `Schema`,
+- `assemblePMSchema(manifest | manifest[])` — compiles one or more manifests into a ProseMirror `Schema` (via `@tiptap/pm/model`),
+- the exported derivation pieces the Tiptap extension generator shares (`collectManifestEntries`, `allBlockCategories`, `contentExpressionFor`, `attrsFromSchema`, `groupsFor`),
 - id conventions: `generateNodeId()` (UUIDv7, matching the server's `Str::uuid7()`) and `NODE_ID_ATTR` (`'id'`).
 
 Nothing under `src/core` imports React or RJSF. The editing half ships as two more subpaths:
 
-- **`/react`** — the `BlockdocEditor` island on raw `prosemirror-*` modules with a hand-rolled
-  portal NodeView bridge. Owns `EditorState` for its lifetime; commits `doc.toJSON()` through
-  `onChange` on trailing debounce (default 400ms), blur, and `flushCommits()` (ref or `commitBus`);
-  a last-committed guard absorbs the RJSF onChange echo while a genuinely external value rebuilds
-  state (fresh undo history, selection remapped by node id) without firing a commit. A node-id
-  plugin keeps every id attr a unique UUIDv7. NodeView registry: `registerNodeView(name, Component)`
-  overrides; unregistered non-base-prose nodes get the generic NodeView (labeled chrome + a
-  `SchemaForm` over the node's attrs — the drill-down seam). Collab seams prepared but empty:
-  `extraPlugins({ schema })` and the `DocSource` abstraction (default `valueDocSource`).
+- **`/react`** — the `BlockdocEditor` island on **Tiptap** (v3, ADR-0072 as amended by
+  splicewire-editor issue 11). `createManifestExtensions(manifests, { docAdmits?, nodeViews? })`
+  GENERATES the Tiptap `Node`/`Mark` extensions from the manifests at runtime — never
+  hand-authored per node type — reusing the exact derivation pieces `src/core/assemble.ts`
+  exports (`collectManifestEntries`, `allBlockCategories`, `contentExpressionFor`,
+  `attrsFromSchema`, `groupsFor`), so `assemblePMSchema` stays the conformance oracle
+  (`tests/schema-parity.test.ts` pins both compilations to the same accept/reject behavior).
+  The generated extensions carry the editing DOM: semantic tags for the base prose set
+  (`p`, `h{level}`, `blockquote`, `ul`/`ol`/`li`, `pre>code`, `hr`, `br`) with `data-node-id`,
+  generic `div[data-node-type]` for typed blocks, and marks as `strong`/`em`/`code`/`a[href]`/
+  `span[data-annotation-id]`. The island (`useEditor`/`EditorContent`) commits `doc.toJSON()`
+  through `onChange` on trailing debounce (default 400ms), blur, and `flushCommits()` (ref or
+  `commitBus`); a last-committed guard absorbs the RJSF onChange echo while a genuinely external
+  value rebuilds the document via a commit-suppressed, history-free `setContent` (selection
+  remapped by node id, undo history effectively fresh) without firing a commit. A free-tier
+  `BubbleMenu` offers bold/italic/code and prompt-free link set/unset for whichever of those
+  marks the manifests declare. NodeView registry: `registerNodeView(name, Component)` overrides;
+  unregistered non-base-prose nodes get the generic NodeView (labeled chrome + a `SchemaForm`
+  over the node's attrs — the drill-down seam); components keep the `NodeViewComponentProps`
+  contract and ride `ReactNodeViewRenderer`/`NodeViewWrapper` through the `tiptapNodeView`
+  adapter. Collab seams prepared but empty: `extraPlugins({ schema })` and the `DocSource`
+  abstraction (default `valueDocSource`).
+
+  **Guardrails** (enforced by `tests/no-pro-imports.test.ts`): MIT core + free extensions only —
+  no `@tiptap-pro`/cloud modules (collab is Reverb + y-prosemirror later; comments are our
+  annotation marks; AI is the intent bus). Our integrity plugins (node-id UUIDv7 uniqueness,
+  annotation-mark id integrity) stay RAW ProseMirror plugins registered through
+  `addProseMirrorPlugins` — one-layer portability in both directions — and every ProseMirror
+  import rides `@tiptap/pm/*` so exactly one PM instance exists.
 - **`/rjsf`** — `createRichContentWidget(nodeViewRegistry, defaults?)` producing a component that
   mounts as an RJSF field (object values) or widget: reads `manifest`/`manifestRef` (resolved via
   `formContext.schemaFetcher`, falling back to `defaults.schemaFetcher`), `palette`, and `commit`

@@ -7,7 +7,7 @@ import {
     needsGenericNodeView,
     resolveNodeViewComponents,
 } from '../src/react/node-views';
-import type { NodeViewComponentProps } from '../src/react/portal-bridge';
+import type { NodeViewComponentProps } from '../src/react/node-views';
 import base from './fixtures/base.manifest.json';
 import contentArticle from './fixtures/content-article.manifest.json';
 

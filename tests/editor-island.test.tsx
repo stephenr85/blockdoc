@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
-import { TextSelection } from 'prosemirror-state';
-import type { EditorView } from 'prosemirror-view';
+import { TextSelection } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NODE_ID_ATTR } from '../src/core';

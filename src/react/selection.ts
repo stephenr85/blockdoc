@@ -1,6 +1,6 @@
-import type { Node as PMNode } from 'prosemirror-model';
-import { NodeSelection, Selection } from 'prosemirror-state';
-import type { EditorState } from 'prosemirror-state';
+import type { Node as PMNode } from '@tiptap/pm/model';
+import { NodeSelection, Selection } from '@tiptap/pm/state';
+import type { EditorState } from '@tiptap/pm/state';
 import { NODE_ID_ATTR } from '../core';
 
 /**

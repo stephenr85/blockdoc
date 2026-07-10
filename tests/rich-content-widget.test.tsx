@@ -3,7 +3,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BlockdocManifest } from '../src/core';
 import { createNodeViewRegistry } from '../src/react/node-views';
-import type { NodeViewComponentProps } from '../src/react/portal-bridge';
+import type { NodeViewComponentProps } from '../src/react/node-views';
 import { createRichContentWidget } from '../src/rjsf';
 import base from './fixtures/base.manifest.json';
 import contentArticle from './fixtures/content-article.manifest.json';

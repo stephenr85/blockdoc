@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EditorState, TextSelection } from 'prosemirror-state';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { assemblePMSchema } from '../src/core';
 import {
     annotationIds,

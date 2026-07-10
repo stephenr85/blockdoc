@@ -1,5 +1,5 @@
-import { Plugin } from 'prosemirror-state';
-import type { Transaction } from 'prosemirror-state';
+import { Plugin } from '@tiptap/pm/state';
+import type { Transaction } from '@tiptap/pm/state';
 import { generateNodeId, NODE_ID_ATTR } from '../core';
 
 /**

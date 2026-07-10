@@ -1,9 +1,32 @@
+import type { Node as PMNode } from '@tiptap/pm/model';
+import type { EditorView } from '@tiptap/pm/view';
+import { NodeViewWrapper, useReactNodeView } from '@tiptap/react';
+import type { ReactNodeViewProps } from '@tiptap/react';
 import { SchemaForm } from '@rushing/rjsf-registry';
 import type { ComponentType } from 'react';
 import { useMemo } from 'react';
 import { NODE_ID_ATTR } from '../core';
 import type { BlockdocManifest, JsonSchema, NodeManifestEntry } from '../core';
-import type { NodeViewComponentProps } from './portal-bridge';
+
+/**
+ * Props every blockdoc NodeView component receives. This is the PUBLIC
+ * contract hosts register components against — it survived the Tiptap swap
+ * unchanged (the Tiptap-side plumbing is absorbed by {@link tiptapNodeView}).
+ */
+export interface NodeViewComponentProps {
+    node: PMNode;
+    view: EditorView;
+    getPos: () => number | undefined;
+    /** Patch node attrs (merged over the current ones; id is preserved). */
+    updateAttrs: (attrs: Record<string, unknown>) => void;
+    /** The manifest's attrsSchema for this node type, when known. */
+    attrsSchema?: JsonSchema;
+    /**
+     * Where PM-managed child content goes: render `<div ref={contentRef} />`
+     * at the passthrough spot. Null for leaf nodes.
+     */
+    contentRef: ((element: HTMLElement | null) => void) | null;
+}
 
 /**
  * The base prose set renders natively — PM's own DOM, no NodeView chrome.
@@ -64,9 +87,9 @@ export interface ResolvedNodeView {
 }
 
 /**
- * The resolution the island builds its PM nodeViews map from: a registered
- * component wins; unregistered non-base nodes fall back to the generic
- * NodeView; base prose nodes are absent (native rendering).
+ * The resolution the manifest→extensions generator binds NodeViews from: a
+ * registered component wins; unregistered non-base nodes fall back to the
+ * generic NodeView; base prose nodes are absent (native rendering).
  */
 export function resolveNodeViewComponents(
     manifests: readonly BlockdocManifest[],
@@ -90,6 +113,40 @@ export function resolveNodeViewComponents(
     }
 
     return resolved;
+}
+
+/**
+ * Adapt a blockdoc NodeView component to Tiptap's ReactNodeViewRenderer: the
+ * wrapper element rides NodeViewWrapper, the contentDOM passthrough rides the
+ * React NodeView context's contentRef (equivalent to rendering
+ * NodeViewContent), and updateAttrs keeps the merge-and-preserve-id contract.
+ */
+export function tiptapNodeView(resolved: ResolvedNodeView): ComponentType<ReactNodeViewProps> {
+    const { component: Component, attrsSchema } = resolved;
+
+    function BlockdocNodeViewAdapter({ node, editor, getPos, updateAttributes }: ReactNodeViewProps) {
+        const { nodeViewContentRef } = useReactNodeView();
+        const contentRef = node.isLeaf ? null : (nodeViewContentRef ?? null);
+
+        return (
+            <NodeViewWrapper as={node.isInline ? 'span' : 'div'} className="blockdoc-node-view">
+                <Component
+                    node={node}
+                    view={editor.view}
+                    getPos={getPos}
+                    updateAttrs={(attrs) =>
+                        updateAttributes({ ...attrs, [NODE_ID_ATTR]: node.attrs[NODE_ID_ATTR] })
+                    }
+                    attrsSchema={attrsSchema}
+                    contentRef={contentRef}
+                />
+            </NodeViewWrapper>
+        );
+    }
+
+    BlockdocNodeViewAdapter.displayName = `BlockdocNodeView(${Component.displayName ?? Component.name ?? 'Component'})`;
+
+    return BlockdocNodeViewAdapter;
 }
 
 /** The manifest attrsSchema minus the identity attr — id is not hand-edited. */

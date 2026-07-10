@@ -1,5 +1,5 @@
-import type { Mark, Node as PMNode } from 'prosemirror-model';
-import { Plugin, PluginKey } from 'prosemirror-state';
+import type { Mark, Node as PMNode } from '@tiptap/pm/model';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { generateNodeId } from '../core/ids';
 
 /**

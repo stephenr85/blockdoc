@@ -1,7 +1,7 @@
 {
     "name": "@rushing/blockdoc",
     "version": "0.1.0",
-    "description": "Manifest-driven ProseMirror documents: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest \u2192 prosemirror-model Schema via category-derived content expressions), node id conventions, a React editor island (/react) with a NodeView registry, and an RJSF rich-content factory (/rjsf).",
+    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
     "license": "MIT",
     "type": "module",
     "main": "src/core/index.ts",
@@ -25,13 +25,11 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "prosemirror-commands": "^1.6.0",
-        "prosemirror-history": "^1.4.0",
-        "prosemirror-keymap": "^1.2.0",
-        "prosemirror-model": "^1.24.0",
-        "prosemirror-state": "^1.4.0",
-        "prosemirror-transform": "^1.10.0",
-        "prosemirror-view": "^1.37.0",
+        "@tiptap/core": "^3.27.3",
+        "@tiptap/extension-bubble-menu": "^3.27.3",
+        "@tiptap/extensions": "^3.27.3",
+        "@tiptap/pm": "^3.27.3",
+        "@tiptap/react": "^3.27.3",
         "uuid": "^11.0.0"
     },
     "peerDependencies": {
@@ -65,6 +63,7 @@
         "@rjsf/validator-ajv8": "^6.0.0",
         "@rushing/rjsf-registry": "file:../rjsf-registry",
         "@testing-library/react": "^16.1.0",
+        "@types/node": "^26.1.1",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "jsdom": "^26.0.0",

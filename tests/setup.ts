@@ -33,6 +33,16 @@ if (typeof window !== 'undefined') {
     if (!document.elementFromPoint) {
         document.elementFromPoint = () => null;
     }
+
+    // floating-ui (behind Tiptap's BubbleMenu) observes elements for
+    // repositioning; jsdom has no ResizeObserver.
+    if (typeof globalThis.ResizeObserver === 'undefined') {
+        globalThis.ResizeObserver = class ResizeObserver {
+            observe(): void {}
+            unobserve(): void {}
+            disconnect(): void {}
+        };
+    }
 }
 
 export {};

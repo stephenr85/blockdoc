@@ -1,23 +1,24 @@
-import type { Node as PMNode, NodeType, Schema } from 'prosemirror-model';
-import { baseKeymap } from 'prosemirror-commands';
-import { history, redo, undo } from 'prosemirror-history';
-import { keymap } from 'prosemirror-keymap';
-import { EditorState } from 'prosemirror-state';
-import type { Plugin } from 'prosemirror-state';
-import { EditorView } from 'prosemirror-view';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
-import { assemblePMSchema, generateNodeId, NODE_ID_ATTR } from '../core';
+import { Extension } from '@tiptap/core';
+import type { Editor } from '@tiptap/core';
+import type { NodeType, Schema } from '@tiptap/pm/model';
+import type { Plugin } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
+import { UndoRedo } from '@tiptap/extensions';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import type { EditorState } from '@tiptap/pm/state';
+import { generateNodeId, NODE_ID_ATTR } from '../core';
 import type { BlockdocManifest } from '../core';
 import { CommitController } from './commit-controller';
 import type { CommitPolicy, DocJson } from './commit-controller';
-import { withEditingDOM } from './editing-schema';
 import { valueDocSource } from './doc-source';
 import type { DocSource } from './doc-source';
 import { annotationIntegrityPlugin } from './annotation-plugin';
 import { nodeIdPlugin } from './node-id-plugin';
-import { resolveNodeViewComponents } from './node-views';
+import { createManifestExtensions } from './manifest-extensions';
 import type { NodeViewRegistry } from './node-views';
-import { ReactNodeView, usePortalRegistry } from './portal-bridge';
 import { selectionForNodeId, selectionNodeId } from './selection';
 
 /**
@@ -34,10 +35,12 @@ export interface BlockdocEditorHandle {
     flushCommits(): void;
     /** The live EditorView (null before mount). */
     view: EditorView | null;
+    /** The live Tiptap Editor (null before mount). */
+    editor: Editor | null;
 }
 
 export interface BlockdocEditorProps {
-    /** Ordered manifests (e.g. [base, profile]) assembled into the PM schema. */
+    /** Ordered manifests (e.g. [base, profile]) compiled into Tiptap extensions. */
     manifests: BlockdocManifest | BlockdocManifest[];
     /** PM doc JSON; null/undefined initializes an empty doc valid per schema. */
     value?: DocJson | null;
@@ -57,35 +60,16 @@ export interface BlockdocEditorProps {
     className?: string;
 }
 
-function docFromJson(schema: Schema, value: DocJson | null): PMNode {
-    // Hosts hand us null, undefined, {} (RJSF's empty-object default for an
-    // unfilled $ref field), or a PHP-side [] — anything without a node type is
-    // an empty document.
-    if (value == null || typeof (value as { type?: unknown }).type !== 'string') {
-        const empty = schema.topNodeType.createAndFill();
-
-        if (empty === null) {
-            throw new Error('blockdoc: the schema cannot produce an empty doc.');
-        }
-
-        return empty;
-    }
-
-    return schema.nodeFromJSON(value);
+/**
+ * Anything without a node type is an empty document: hosts hand us null,
+ * undefined, {} (RJSF's empty-object default for an unfilled $ref field), or
+ * a PHP-side [].
+ */
+function isDocJson(value: DocJson | null | undefined): value is DocJson {
+    return value != null && typeof (value as { type?: unknown }).type === 'string';
 }
 
-function buildPlugins(schema: Schema, extraPlugins?: (context: { schema: Schema }) => Plugin[]): Plugin[] {
-    return [
-        history(),
-        keymap({ 'Mod-z': undo, 'Shift-Mod-z': redo, 'Mod-y': redo }),
-        keymap(baseKeymap),
-        nodeIdPlugin(),
-        annotationIntegrityPlugin(),
-        ...(extraPlugins?.({ schema }) ?? []),
-    ];
-}
-
-function insertPaletteNode(view: EditorView, type: NodeType): void {
+function insertPaletteNode(editor: Editor, type: NodeType): void {
     const node = type.createAndFill({ [NODE_ID_ATTR]: generateNodeId() });
 
     if (node === null) {
@@ -93,19 +77,42 @@ function insertPaletteNode(view: EditorView, type: NodeType): void {
     }
 
     try {
-        view.dispatch(view.state.tr.replaceSelectionWith(node).scrollIntoView());
-        view.focus();
+        editor.view.dispatch(editor.state.tr.replaceSelectionWith(node).scrollIntoView());
+        editor.view.focus();
     } catch {
         // The node doesn't fit at the selection; a plain palette stays quiet.
     }
 }
 
+const buttonStyle: CSSProperties = {
+    font: 'inherit',
+    fontSize: 12,
+    padding: '2px 8px',
+    border: '1px solid #d4d4d8',
+    borderRadius: 4,
+    background: '#fff',
+    cursor: 'pointer',
+};
+
+const BUBBLE_TOGGLE_MARKS = [
+    ['strong', 'B'],
+    ['em', 'I'],
+    ['code', '</>'],
+] as const;
+
+function markIsActive(editor: Editor, name: string): boolean {
+    return editor.schema.marks[name] !== undefined && editor.isActive(name);
+}
+
 /**
- * The editor island: owns EditorState for its lifetime, initializes from
- * `value`, commits doc.toJSON() through onChange on trailing debounce, blur,
- * and flush (ref or commitBus). The last-committed guard absorbs the RJSF
- * onChange echo; a genuinely external value rebuilds state (fresh undo
- * history, selection remapped by node id) without firing a commit.
+ * The editor island, on Tiptap (ADR-0072, amended): owns the Editor for its
+ * lifetime, initializes from `value`, commits doc.toJSON() through onChange
+ * on trailing debounce, blur, and flush (ref or commitBus). The
+ * last-committed guard absorbs the RJSF onChange echo; a genuinely external
+ * value rebuilds the document via a commit-suppressed, history-free
+ * setContent with the selection remapped by node id. Our integrity plugins
+ * (node id, annotation) stay raw PM plugins registered through
+ * `addProseMirrorPlugins`, as does the `extraPlugins` collab seam.
  */
 export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorProps>(function BlockdocEditor(
     {
@@ -124,22 +131,18 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     ref,
 ) {
     const manifestList = useMemo(() => (Array.isArray(manifests) ? manifests : [manifests]), [manifests]);
-    const schema = useMemo(() => withEditingDOM(assemblePMSchema(manifestList)), [manifestList]);
-    const [portals, portalRegistry] = usePortalRegistry();
 
-    const mountRef = useRef<HTMLDivElement | null>(null);
-    const viewRef = useRef<EditorView | null>(null);
     const controllerRef = useRef<CommitController | null>(null);
+    // External rebuilds must never fire a commit: suppresses onUpdate.
+    const suppressCommitsRef = useRef(false);
 
-    // Kept as refs so the view effect only re-runs on schema changes.
+    // Kept as refs so the editor is only recreated on manifest/registry changes.
     const onChangeRef = useRef(onChange);
     onChangeRef.current = onChange;
     const commitPolicyRef = useRef(commitPolicy);
     commitPolicyRef.current = commitPolicy;
     const extraPluginsRef = useRef(extraPlugins);
     extraPluginsRef.current = extraPlugins;
-    const nodeViewsRef = useRef(nodeViews);
-    nodeViewsRef.current = nodeViews;
     const onSelectionChangeRef = useRef(onSelectionChange);
     onSelectionChangeRef.current = onSelectionChange;
 
@@ -159,67 +162,84 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     const sourceRef = useRef(source);
     sourceRef.current = source;
 
+    const extensions = useMemo(
+        () => [
+            ...createManifestExtensions(manifestList, { nodeViews }),
+            UndoRedo,
+            // GUARDRAIL (ADR-0072): our plugins stay raw PM plugins — one-layer
+            // portability in both directions.
+            Extension.create({
+                name: 'blockdocPlugins',
+                addProseMirrorPlugins() {
+                    return [
+                        nodeIdPlugin(),
+                        annotationIntegrityPlugin(),
+                        ...(extraPluginsRef.current?.({ schema: this.editor.schema }) ?? []),
+                    ];
+                },
+            }),
+        ],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [manifestList, nodeViews],
+    );
+
+    const initialValue = sourceRef.current.get();
+
+    const editor = useEditor(
+        {
+            extensions,
+            content: isDocJson(initialValue) ? initialValue : null,
+            immediatelyRender: true,
+            shouldRerenderOnTransaction: false,
+            onCreate: ({ editor: created }) => noteSelection(created.state),
+            onTransaction: ({ editor: current }) => noteSelection(current.state),
+            onUpdate: () => {
+                if (!suppressCommitsRef.current) {
+                    controllerRef.current?.noteChange();
+                }
+            },
+            onBlur: () => controllerRef.current?.noteBlur(),
+        },
+        [extensions],
+    );
+
+    // The commit controller lives exactly as long as its editor.
     useEffect(() => {
-        const initialValue = sourceRef.current.get();
+        if (editor === null) {
+            return;
+        }
 
         const controller = new CommitController(
-            () => viewRef.current!.state.doc.toJSON() as DocJson,
+            () => editor.state.doc.toJSON() as DocJson,
             (doc) => onChangeRef.current?.(doc),
             commitPolicyRef.current ?? {},
-            initialValue,
+            sourceRef.current.get(),
         );
         controllerRef.current = controller;
 
-        const resolvedNodeViews = resolveNodeViewComponents(manifestList, nodeViewsRef.current);
-        const pmNodeViews: NonNullable<ConstructorParameters<typeof EditorView>[1]['nodeViews']> = {};
-
-        for (const [name, { component, attrsSchema }] of resolvedNodeViews) {
-            pmNodeViews[name] = (node, editorView, getPos) =>
-                new ReactNodeView(node, editorView, getPos, component, attrsSchema, portalRegistry);
-        }
-
-        const view: EditorView = new EditorView(mountRef.current!, {
-            state: EditorState.create({
-                doc: docFromJson(schema, initialValue),
-                plugins: buildPlugins(schema, extraPluginsRef.current),
-            }),
-            nodeViews: pmNodeViews,
-            dispatchTransaction: (transaction) => {
-                view.updateState(view.state.apply(transaction));
-
-                if (transaction.docChanged) {
-                    controller.noteChange();
-                }
-
-                noteSelection(view.state);
-            },
-            handleDOMEvents: {
-                blur: () => {
-                    controller.noteBlur();
-                    return false;
-                },
-            },
-        });
-        viewRef.current = view;
-        noteSelection(view.state);
-
         return () => {
-            viewRef.current = null;
-            controllerRef.current = null;
-            view.destroy();
+            if (controllerRef.current === controller) {
+                controllerRef.current = null;
+            }
+
             controller.dispose();
         };
-    }, [schema, manifestList, portalRegistry, noteSelection]);
+    }, [editor]);
 
     // External value intake: the echo guard decides ignore vs rebuild. A
-    // rebuild replaces EditorState wholesale (fresh history), remaps the
-    // selection by node id, and never fires a commit.
+    // rebuild replaces the document via setContent in ONE transaction that is
+    // kept out of the undo history (fresh history semantics), remaps the
+    // selection by node id, and never fires a commit (suppression + the
+    // controller's noteRebuilt re-seed).
     useEffect(() => {
+        if (editor === null) {
+            return;
+        }
+
         const applyExternalValue = (doc: DocJson | null) => {
-            const view = viewRef.current;
             const controller = controllerRef.current;
 
-            if (view === null || controller === null) {
+            if (controller === null || editor.isDestroyed) {
                 return;
             }
 
@@ -227,24 +247,37 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                 return;
             }
 
-            const survivingId = selectionNodeId(view.state);
-            const nextDoc = docFromJson(schema, doc);
+            const survivingId = selectionNodeId(editor.state);
 
-            view.updateState(
-                EditorState.create({
-                    doc: nextDoc,
-                    selection: selectionForNodeId(nextDoc, survivingId),
-                    plugins: buildPlugins(schema, extraPluginsRef.current),
-                }),
-            );
+            suppressCommitsRef.current = true;
+
+            try {
+                editor
+                    .chain()
+                    .command(({ tr }) => {
+                        tr.setMeta('addToHistory', false);
+
+                        return true;
+                    })
+                    .setContent(isDocJson(doc) ? doc : null, { emitUpdate: false })
+                    .command(({ tr }) => {
+                        tr.setSelection(selectionForNodeId(tr.doc, survivingId));
+
+                        return true;
+                    })
+                    .run();
+            } finally {
+                suppressCommitsRef.current = false;
+            }
+
             controller.noteRebuilt(doc);
-            noteSelection(view.state);
+            noteSelection(editor.state);
         };
 
         applyExternalValue(source.get());
 
         return source.subscribe?.((doc) => applyExternalValue(doc));
-    }, [source, schema, noteSelection]);
+    }, [source, editor, noteSelection]);
 
     useEffect(() => {
         if (commitBus === undefined) {
@@ -259,10 +292,13 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
         () => ({
             flushCommits: () => controllerRef.current?.flush(),
             get view() {
-                return viewRef.current;
+                return editor !== null && !editor.isDestroyed ? editor.view : null;
+            },
+            get editor() {
+                return editor !== null && !editor.isDestroyed ? editor : null;
             },
         }),
-        [],
+        [editor],
     );
 
     const paletteTypes = useMemo(
@@ -272,6 +308,28 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
             ),
         [manifestList],
     );
+
+    // The BubbleMenu chrome only offers marks the manifests actually declare.
+    const bubbleToggles = useMemo(
+        () => (editor === null ? [] : BUBBLE_TOGGLE_MARKS.filter(([name]) => editor.schema.marks[name] !== undefined)),
+        [editor],
+    );
+    const hasLinkMark = editor !== null && editor.schema.marks.link !== undefined;
+
+    const activeMarks = useEditorState({
+        editor,
+        selector: ({ editor: current }) =>
+            current === null || current.isDestroyed
+                ? null
+                : {
+                      strong: markIsActive(current, 'strong'),
+                      em: markIsActive(current, 'em'),
+                      code: markIsActive(current, 'code'),
+                      link: markIsActive(current, 'link'),
+                  },
+    });
+
+    const [linkDraft, setLinkDraft] = useState('');
 
     return (
         <div className={className} data-blockdoc-editor="">
@@ -292,30 +350,96 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                             key={name}
                             type="button"
                             onClick={() => {
-                                const view = viewRef.current;
-                                const type = schema.nodes[name];
+                                const type = editor?.schema.nodes[name];
 
-                                if (view && type) {
-                                    insertPaletteNode(view, type);
+                                if (editor && type) {
+                                    insertPaletteNode(editor, type);
                                 }
                             }}
-                            style={{
-                                font: 'inherit',
-                                fontSize: 12,
-                                padding: '2px 8px',
-                                border: '1px solid #d4d4d8',
-                                borderRadius: 4,
-                                background: '#fff',
-                                cursor: 'pointer',
-                            }}
+                            style={buttonStyle}
                         >
                             {name}
                         </button>
                     ))}
                 </div>
             )}
-            <div ref={mountRef} data-blockdoc-mount="" />
-            {portals}
+            {editor !== null && (bubbleToggles.length > 0 || hasLinkMark) && (
+                <BubbleMenu
+                    editor={editor}
+                    data-blockdoc-bubble-menu=""
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: 4,
+                        border: '1px solid #d4d4d8',
+                        borderRadius: 6,
+                        background: '#fff',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                    }}
+                >
+                    {bubbleToggles.map(([name, label]) => (
+                        <button
+                            key={name}
+                            type="button"
+                            data-blockdoc-bubble-toggle={name}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => editor.chain().focus().toggleMark(name).run()}
+                            style={{
+                                ...buttonStyle,
+                                fontWeight: activeMarks?.[name] === true ? 700 : 400,
+                                background: activeMarks?.[name] === true ? '#e4e4e7' : '#fff',
+                            }}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                    {hasLinkMark && (
+                        <>
+                            <input
+                                type="text"
+                                data-blockdoc-bubble-link-input=""
+                                value={linkDraft}
+                                onChange={(event) => setLinkDraft(event.target.value)}
+                                placeholder="https://…"
+                                style={{
+                                    font: 'inherit',
+                                    fontSize: 12,
+                                    width: 140,
+                                    padding: '2px 6px',
+                                    border: '1px solid #d4d4d8',
+                                    borderRadius: 4,
+                                }}
+                            />
+                            <button
+                                type="button"
+                                data-blockdoc-bubble-link-set=""
+                                disabled={linkDraft === ''}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => {
+                                    editor.chain().focus().setMark('link', { href: linkDraft }).run();
+                                    setLinkDraft('');
+                                }}
+                                style={{ ...buttonStyle, opacity: linkDraft === '' ? 0.5 : 1 }}
+                            >
+                                Link
+                            </button>
+                            {activeMarks?.link === true && (
+                                <button
+                                    type="button"
+                                    data-blockdoc-bubble-link-unset=""
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => editor.chain().focus().unsetMark('link').run()}
+                                    style={buttonStyle}
+                                >
+                                    Unlink
+                                </button>
+                            )}
+                        </>
+                    )}
+                </BubbleMenu>
+            )}
+            <EditorContent editor={editor} data-blockdoc-mount="" />
         </div>
     );
 });

@@ -1,4 +1,4 @@
-import { EditorState } from 'prosemirror-state';
+import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { assemblePMSchema, NODE_ID_ATTR } from '../src/core';
 import type { BlockdocManifest } from '../src/core';
