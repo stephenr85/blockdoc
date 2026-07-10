@@ -22,11 +22,13 @@ interface RichContentProps {
     uiSchema?: UiSchema;
     registry?: { formContext?: Record<string, unknown> };
     formContext?: Record<string, unknown>;
+    /** RJSF v6 field-path identity; its `path` must ride every onChange or the update lands on the root. */
+    fieldPathId?: { path?: Array<string | number> };
     // Widget-signature props.
     value?: unknown;
     options?: Record<string, unknown>;
-    // Shared.
-    onChange?: (doc: DocJson) => void;
+    // Shared. In field mode RJSF's signature is (newFormData, path, errorSchema?, id?).
+    onChange?: (doc: DocJson, path?: Array<string | number>) => void;
 }
 
 export interface RichContentOptions {
@@ -132,6 +134,8 @@ export function createRichContentWidget(
         const fieldSchema = props.schema;
         const onChangeRef = useRef(props.onChange);
         onChangeRef.current = props.onChange;
+        const fieldPathRef = useRef(props.fieldPathId?.path);
+        fieldPathRef.current = props.fieldPathId?.path;
 
         // Advisory validation at commit boundaries: surface as a red list;
         // never blocks the commit — the server's validation is authoritative.
@@ -149,7 +153,9 @@ export function createRichContentWidget(
                     );
                 }
 
-                onChangeRef.current?.(doc);
+                // Field mode MUST scope the update by path (RJSF v6 routes a
+                // path-less onChange to the form root, wiping sibling fields).
+                onChangeRef.current?.(doc, fieldPathRef.current);
             },
             [fieldSchema],
         );
