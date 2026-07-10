@@ -55,7 +55,10 @@ export interface BlockdocEditorProps {
 }
 
 function docFromJson(schema: Schema, value: DocJson | null): PMNode {
-    if (value === null) {
+    // Hosts hand us null, undefined, {} (RJSF's empty-object default for an
+    // unfilled $ref field), or a PHP-side [] — anything without a node type is
+    // an empty document.
+    if (value == null || typeof (value as { type?: unknown }).type !== 'string') {
         const empty = schema.topNodeType.createAndFill();
 
         if (empty === null) {
