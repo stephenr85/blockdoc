@@ -1,0 +1,33 @@
+{
+    "name": "@stephenr85/blockdoc",
+    "version": "0.1.0",
+    "description": "Manifest-driven ProseMirror documents: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → prosemirror-model Schema via category-derived content expressions), and node id conventions. React-free core; /react and /rjsf subpaths land later.",
+    "license": "MIT",
+    "type": "module",
+    "main": "src/core/index.ts",
+    "types": "src/core/index.ts",
+    "exports": {
+        ".": "./src/core/index.ts",
+        "./core": "./src/core/index.ts"
+    },
+    "files": [
+        "src",
+        "README.md"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/stephenr85/blockdoc.git"
+    },
+    "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "prosemirror-model": "^1.24.0",
+        "uuid": "^11.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.0",
+        "vitest": "^3.0.0"
+    }
+}

@@ -1,0 +1,70 @@
+{
+    "profile": "content",
+    "version": 1,
+    "doc": {
+        "admitsChildCategories": ["section"]
+    },
+    "nodes": [
+        {
+            "name": "contentArticle",
+            "description": "A grounded content article, planned as an outline then written section by section.",
+            "group": "block",
+            "category": null,
+            "admitsChildCategories": ["outline", "section"],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "contentOutline",
+            "description": "The article outline: a title, a one-line excerpt, and an ordered list of section headings to write.",
+            "group": "block",
+            "category": "outline",
+            "admitsChildCategories": [],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] },
+                    "title": { "type": "string", "default": "" },
+                    "excerpt": { "type": "string", "default": "" },
+                    "sectionHeadings": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "default": []
+                    }
+                }
+            }
+        },
+        {
+            "name": "contentSection",
+            "description": "A single section of the article: a heading and grounded body prose.",
+            "group": "block",
+            "category": "section",
+            "admitsChildCategories": ["section", "prose"],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] },
+                    "heading": { "type": "string", "default": "" },
+                    "groundingTokens": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "default": []
+                    },
+                    "imagePrompt": { "type": ["string", "null"] },
+                    "strategy": { "type": ["string", "null"] }
+                }
+            }
+        }
+    ],
+    "marks": []
+}
