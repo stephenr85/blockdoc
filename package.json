@@ -1,14 +1,16 @@
 {
     "name": "@stephenr85/blockdoc",
     "version": "0.1.0",
-    "description": "Manifest-driven ProseMirror documents: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → prosemirror-model Schema via category-derived content expressions), and node id conventions. React-free core; /react and /rjsf subpaths land later.",
+    "description": "Manifest-driven ProseMirror documents: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → prosemirror-model Schema via category-derived content expressions), node id conventions, a React editor island (/react) with a NodeView registry, and an RJSF rich-content factory (/rjsf).",
     "license": "MIT",
     "type": "module",
     "main": "src/core/index.ts",
     "types": "src/core/index.ts",
     "exports": {
         ".": "./src/core/index.ts",
-        "./core": "./src/core/index.ts"
+        "./core": "./src/core/index.ts",
+        "./react": "./src/react/index.ts",
+        "./rjsf": "./src/rjsf/index.ts"
     },
     "files": [
         "src",
@@ -23,10 +25,51 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
+        "prosemirror-commands": "^1.6.0",
+        "prosemirror-history": "^1.4.0",
+        "prosemirror-keymap": "^1.2.0",
         "prosemirror-model": "^1.24.0",
+        "prosemirror-state": "^1.4.0",
+        "prosemirror-transform": "^1.10.0",
+        "prosemirror-view": "^1.37.0",
         "uuid": "^11.0.0"
     },
+    "peerDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@stephenr85/rjsf-registry": "^0.1.0",
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "peerDependenciesMeta": {
+        "@rjsf/core": {
+            "optional": true
+        },
+        "@rjsf/utils": {
+            "optional": true
+        },
+        "@stephenr85/rjsf-registry": {
+            "optional": true
+        },
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
     "devDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/shadcn": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@rjsf/validator-ajv8": "^6.0.0",
+        "@stephenr85/rjsf-registry": "file:../rjsf-registry",
+        "@testing-library/react": "^16.1.0",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "jsdom": "^26.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
         "typescript": "^5.7.0",
         "vitest": "^3.0.0"
     }

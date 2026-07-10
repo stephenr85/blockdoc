@@ -6,7 +6,22 @@ Manifest-driven ProseMirror documents. The `/core` subpath (React-free) ships:
 - `assemblePMSchema(manifest | manifest[])` — compiles one or more manifests into a `prosemirror-model` `Schema`,
 - id conventions: `generateNodeId()` (UUIDv7, matching the server's `Str::uuid7()`) and `NODE_ID_ATTR` (`'id'`).
 
-`/react` and `/rjsf` subpaths come later; nothing under `src/core` imports React or RJSF.
+Nothing under `src/core` imports React or RJSF. The editing half ships as two more subpaths:
+
+- **`/react`** — the `BlockdocEditor` island on raw `prosemirror-*` modules with a hand-rolled
+  portal NodeView bridge. Owns `EditorState` for its lifetime; commits `doc.toJSON()` through
+  `onChange` on trailing debounce (default 400ms), blur, and `flushCommits()` (ref or `commitBus`);
+  a last-committed guard absorbs the RJSF onChange echo while a genuinely external value rebuilds
+  state (fresh undo history, selection remapped by node id) without firing a commit. A node-id
+  plugin keeps every id attr a unique UUIDv7. NodeView registry: `registerNodeView(name, Component)`
+  overrides; unregistered non-base-prose nodes get the generic NodeView (labeled chrome + a
+  `SchemaForm` over the node's attrs — the drill-down seam). Collab seams prepared but empty:
+  `extraPlugins({ schema })` and the `DocSource` abstraction (default `valueDocSource`).
+- **`/rjsf`** — `createRichContentWidget(nodeViewRegistry, defaults?)` producing a component that
+  mounts as an RJSF field (object values) or widget: reads `manifest`/`manifestRef` (resolved via
+  `formContext.schemaFetcher`, falling back to `defaults.schemaFetcher`), `palette`, and `commit`
+  from `ui:options`; assembles `[defaults.baseManifest, profile]`; runs advisory client-side
+  validation of the field schema at commit boundaries (server stays authoritative).
 
 ```ts
 import { assemblePMSchema, generateNodeId } from '@stephenr85/blockdoc/core';
