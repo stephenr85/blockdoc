@@ -1,3 +1,4 @@
+import path from 'path';
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
@@ -25,4 +26,17 @@ export default defineConfig({
         '@rushing/rjsf-registry',
     ],
     noExternal: [/@tiptap\//, 'uuid'],
+    esbuildOptions(options) {
+        // use-sync-external-store (a @tiptap/react dep) is CJS-only; bundled into
+        // ESM browser output its `require("react")` becomes esbuild's throwing
+        // dynamic-require stub. Our peer range is react >= 18, so alias both shim
+        // entries to ESM ports over React's built-in hook (src/shims/).
+        options.alias = {
+            ...(options.alias ?? {}),
+            'use-sync-external-store/shim/index.js': path.resolve('src/shims/use-sync-external-store-shim.ts'),
+            'use-sync-external-store/shim/with-selector.js': path.resolve(
+                'src/shims/use-sync-external-store-with-selector.ts',
+            ),
+        };
+    },
 });
