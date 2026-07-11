@@ -23,7 +23,7 @@ export default defineConfig({
         '@rjsf/shadcn',
         '@rjsf/utils',
         '@rjsf/validator-ajv8',
-        '@rushing/rjsf-registry',
+        '@schemastud/rjsf-registry',
     ],
     noExternal: [/@tiptap\//, 'uuid'],
     esbuildOptions(options) {

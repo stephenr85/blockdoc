@@ -1,0 +1,12 @@
+name: publish
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    uses: schemastud/rjsf-registry/.github/workflows/npm-publish.yml@main
+    permissions:
+      contents: read
+      packages: write

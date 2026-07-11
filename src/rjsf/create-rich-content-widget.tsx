@@ -1,6 +1,6 @@
 import { getUiOptions } from '@rjsf/utils';
 import type { UiSchema } from '@rjsf/utils';
-import { defaultValidator } from '@rushing/rjsf-registry';
+import { defaultValidator } from '@schemastud/rjsf-registry';
 import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BlockdocManifest } from '../core';
