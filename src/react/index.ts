@@ -24,3 +24,5 @@ export {
 } from './node-views';
 export type { NodeViewComponentProps, NodeViewRegistry, ResolvedNodeView } from './node-views';
 export { selectionForNodeId, selectionNodeId } from './selection';
+export { SelectionChrome } from './selection-chrome';
+export type { RemoteSelection, SelectionChromeProps } from './selection-chrome';

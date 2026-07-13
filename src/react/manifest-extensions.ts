@@ -58,7 +58,10 @@ export function createManifestExtensions(
         Node.create({
             name: 'doc',
             topNode: true,
-            content: contentExpressionFor({ admitsChildCategories: admits }, allCategories),
+            content: contentExpressionFor(
+                { admitsChildCategories: admits, childConstraints: doc.childConstraints },
+                allCategories,
+            ),
         }),
     ];
 

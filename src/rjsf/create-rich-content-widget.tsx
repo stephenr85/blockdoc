@@ -40,7 +40,20 @@ interface RichContentProps {
  */
 export interface FormIntentBusLike {
     registerFlush(flush: () => void): () => void;
-    dispatch(intent: { type: string; fieldPath: string; target?: unknown; payload?: unknown }): Promise<void>;
+    /**
+     * `origin` is the reserved collaboration/AI-provenance seam (B4, 10): when an
+     * inline-AI or remote actor drives a write, it tags the intent so the flush
+     * path can distinguish it from a local user edit. Optional and unset today —
+     * the collab/AI build fills it; the doc never carries it (provenance is
+     * SQL-authoritative — see the `document-is-a-location-index` doctrine).
+     */
+    dispatch(intent: {
+        type: string;
+        fieldPath: string;
+        target?: unknown;
+        payload?: unknown;
+        origin?: string;
+    }): Promise<void>;
 }
 
 export interface RichContentOptions {

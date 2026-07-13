@@ -55,6 +55,14 @@ export interface BlockdocEditorProps {
     extraPlugins?: (context: { schema: Schema }) => Plugin[];
     /** Collab seam: replaces the default value-prop-wrapping source. */
     docSource?: DocSource;
+    /**
+     * Collab seam (B4, 10): swap the id-stamping plugin. Defaults to
+     * {@link nodeIdPlugin} (single-user, content-similarity rematch). A
+     * collaborative build replaces it with a CRDT-aware plugin that guarantees
+     * stable ids survive a merge — the named debt: `NodeIdRematcher` does NOT
+     * cover concurrency, and id-merge-safety is the collab effort's to own.
+     */
+    idPlugin?: () => Plugin;
     /** Show the insert palette (manifest block node types). Default true. */
     palette?: boolean;
     className?: string;
@@ -125,6 +133,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
         nodeViews,
         extraPlugins,
         docSource,
+        idPlugin,
         palette = true,
         className,
     },
@@ -143,6 +152,8 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     commitPolicyRef.current = commitPolicy;
     const extraPluginsRef = useRef(extraPlugins);
     extraPluginsRef.current = extraPlugins;
+    const idPluginRef = useRef(idPlugin);
+    idPluginRef.current = idPlugin;
     const onSelectionChangeRef = useRef(onSelectionChange);
     onSelectionChangeRef.current = onSelectionChange;
 
@@ -184,7 +195,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                 name: 'blockdocPlugins',
                 addProseMirrorPlugins() {
                     return [
-                        nodeIdPlugin(),
+                        (idPluginRef.current ?? nodeIdPlugin)(),
                         annotationIntegrityPlugin(),
                         ...(extraPluginsRef.current?.({ schema: this.editor.schema }) ?? []),
                     ];

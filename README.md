@@ -139,16 +139,21 @@ These are the semantics that do **not** compile cleanly:
    no category. The fixture keeps `contentArticle` faithful (category `null`) and instead
    gives the *doc* node the article's role (`doc.admitsChildCategories: ["section"]`);
    the export command must decide whether root blocks map to `doc` or get a category.
-2. **Only set-union repetition is expressible.** Categories compile to `(a | b)*` —
-   sets with unordered, unbounded repetition. PM content expressions can express
-   sequences, counts and required children (`outline sections+`, `heading paragraph*`),
-   but categories cannot. The real grammar's ordering (`content_article`'s Beats drain
-   outline **then** sections, in declaration order) is lost: the derived
-   `(outline | section)*` admits an outline anywhere, repeatedly, or never. Ordering /
-   arity constraints need the `contentExpression` escape hatch (or a richer manifest
-   field later).
-3. **Single-category unions are still just repetition.** `["list_item"]` derives
-   `(list_item)*` — you cannot say "exactly one" or "at least one" child.
+2. **Ordering is not derived — only arity is.** By default categories compile to
+   `(a | b)*` (unordered, unbounded repetition). **Arity** is now expressible via the
+   `childConstraints` manifest field (B1): `childConstraints: { section: { required:
+   true }, heading: { max: 1 } }` compiles to a quantified sequence
+   (`heading? section+`) — `min`/`max`/`required` become PM repetition operators
+   (`+`, `?`, `{n}`, `{min,max}`), and a `max: 0` category is dropped. **Ordering** —
+   the real `content_article`'s Beats draining outline **then** sections — is still not
+   inferred; declaring `childConstraints` pins the `admitsChildCategories` order as a
+   side effect, but for order *without* arity use the `contentExpression` escape hatch
+   (now allowed in profile manifests, not just the base set). A manifest with no
+   `childConstraints` compiles exactly as before (no regression).
+3. ~~**Single-category unions are still just repetition.**~~ **Resolved by B1.**
+   `["list_item"]` still derives `(list_item)*` by default, but
+   `childConstraints: { list_item: { required: true } }` now says "at least one" and
+   `{ min: 1, max: 1 }` says "exactly one".
 4. **`null` ("unconstrained") has no exact PM equivalent.** Server-side, a `null`
    `admitsChildCategories` means "admits anything" (`Block::withContent` enforces
    nothing). PM has no "any" wildcard, so the derivation compiles `null` to the
@@ -176,6 +181,34 @@ These are the semantics that do **not** compile cleanly:
   owns the doc.
 - `tests/fixtures/content-article.manifest.json` — the `content` profile vocabulary
   mirrored by hand from the server blocks, with the adaptations documented above.
+
+## Collaboration seams (reserved, no collab built — B4)
+
+The package reserves five seams so a future collaboration build (y-prosemirror /
+presence transport) plugs in without reshaping the editor. All are **reservation-only**
+today:
+
+1. **`DocSource`** (`docSource` prop) — the editor reads its doc through
+   `DocSource{get(); subscribe?()}`, not only a `value` prop; a collab-backed source pushes
+   remote docs through `subscribe`.
+2. **`extraPlugins`** — raw PM plugins appended to the island's list (the transport plugs
+   in here).
+3. **Swappable id-plugin** (`idPlugin` prop) — defaults to `nodeIdPlugin`; a collab build
+   replaces it with a CRDT-aware plugin.
+4. **Intent `origin`** — the `FormIntentBusLike` intent payload carries an optional
+   `origin` so an inline-AI / remote write is distinguishable from a local edit; the flush
+   path stays pluggable (`registerFlush`), and AI writes ride the same transport (no side
+   channel).
+5. **Annotation mark + `document_bindings` anchor** — `annotation-plugin` keeps the
+   comment/binding anchor open; never a second CRDT.
+
+**The named debt (the crux invariant):** *stable node ids MUST survive a CRDT merge.* The
+document is a location index so one CRDT suffices (truth is SQL-authoritative — see the
+`document-is-a-location-index` doctrine), but a merge could duplicate or drop ids.
+`NodeIdRematcher` does **not** cover concurrency (it is single-user content-similarity
+rematch). The collaboration effort owns id-merge-safety **and** a post-merge validity pass
+(a concurrently-valid pair of edits can merge to an invalid tree). Presence/lock state lives
+in the transport, **never** in the document (see `lock-and-presence-state-lives-in-transport`).
 
 ## Development
 
