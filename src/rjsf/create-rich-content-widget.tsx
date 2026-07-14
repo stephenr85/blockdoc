@@ -1,6 +1,6 @@
 import { getUiOptions } from '@rjsf/utils';
 import type { UiSchema } from '@rjsf/utils';
-import { defaultValidator } from '@schemastud/rjsf-registry';
+import { defaultValidator } from '@schemastud/seam';
 import type { ComponentType } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BlockdocManifest } from '../core';
@@ -10,7 +10,7 @@ import type { CommitPolicy, DocJson } from '../react/commit-controller';
 import type { NodeViewRegistry } from '../react/node-views';
 
 /**
- * The rjsf-registry uiSchema walker emits `ui:field` (not ui:widget) for
+ * The seam uiSchema walker emits `ui:field` (not ui:widget) for
  * component resolutions on object/array nodes, so this component is mounted
  * as an RJSF FIELD for object-typed doc values — while plain hosts may mount
  * it with widget-signature props. It accepts both and normalizes internally.
@@ -32,7 +32,7 @@ interface RichContentProps {
 }
 
 /**
- * The formContext intent-bus seam (structurally the rjsf-registry
+ * The formContext intent-bus seam (structurally the seam
  * FormIntentBus — typed here so blockdoc takes no dependency on it). When a
  * host provides one, the widget registers the island's commit flush (a dirty
  * editor can never race an intent with a stale doc) and renders the

@@ -24,5 +24,7 @@ export {
 } from './node-views';
 export type { NodeViewComponentProps, NodeViewRegistry, ResolvedNodeView } from './node-views';
 export { selectionForNodeId, selectionNodeId } from './selection';
-export { SelectionChrome } from './selection-chrome';
-export type { RemoteSelection, SelectionChromeProps } from './selection-chrome';
+// SelectionChrome now lives in the medium-neutral seam socket; re-exported here
+// for blockdoc consumers that imported it from this entry.
+export { SelectionChrome } from '@schemastud/seam';
+export type { RemoteSelection, SelectionChromeProps } from '@schemastud/seam';

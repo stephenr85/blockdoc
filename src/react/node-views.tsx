@@ -2,7 +2,7 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import type { EditorView } from '@tiptap/pm/view';
 import { NodeViewWrapper, useReactNodeView } from '@tiptap/react';
 import type { ReactNodeViewProps } from '@tiptap/react';
-import { SchemaForm } from '@schemastud/rjsf-registry';
+import { SchemaForm } from '@schemastud/seam';
 import type { ComponentType } from 'react';
 import { useMemo } from 'react';
 import { NODE_ID_ATTR } from '../core';
